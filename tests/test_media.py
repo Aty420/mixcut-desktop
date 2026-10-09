@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mixcut.engine import render_pending
-from mixcut.media import Cancelled, Control, probe, run, scan, ffmpeg_exe
+from mixcut.media import Cancelled, Clip, Control, normalize, probe, run, scan, ffmpeg_exe
 from mixcut.project import Project
 from mixcut.selftest import make_video, self_test
 
@@ -16,6 +16,19 @@ SETTINGS = {"width": 96, "height": 128, "fps": 30, "mute": False}
 
 
 class MediaTests(unittest.TestCase):
+    def test_normalization_keeps_duration_with_and_without_audio(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for audio in (True, False):
+                source = root / f"source-{audio}.mp4"
+                target = root / f"normalized-{audio}.mp4"
+                make_video(source, audio=audio, duration=1.7)
+                duration, has_audio = probe(source, Control())
+                normalize(Clip(str(source), "fixture", duration, has_audio), target, SETTINGS, Control())
+                rendered_duration, rendered_audio = probe(target, Control())
+                self.assertLessEqual(abs(rendered_duration - duration), 0.07)
+                self.assertTrue(rendered_audio)
+
     def test_real_video_smoke(self):
         self.assertTrue(self_test()["ok"])
 

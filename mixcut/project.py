@@ -21,13 +21,11 @@ class ProjectLock(AbstractContextManager):
 
     def __enter__(self):
         self.directory.mkdir(exist_ok=True)
-        self.handle = (self.directory / "lock").open("a+b")
-        self.handle.seek(0)
-        if not self.handle.read(1):
-            self.handle.write(b"0")
-            self.handle.flush()
-        self.handle.seek(0)
         try:
+            # Windows byte-range locks also deny reads of the locked byte.
+            # Locking beyond EOF is supported, so no read/write is needed.
+            self.handle = (self.directory / "lock").open("a+b")
+            self.handle.seek(0)
             if os.name == "nt":
                 import msvcrt
                 msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
@@ -35,7 +33,9 @@ class ProjectLock(AbstractContextManager):
                 import fcntl
                 fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
-            self.handle.close()
+            if self.handle is not None:
+                self.handle.close()
+                self.handle = None
             raise RuntimeError("此素材项目正在被另一个程序窗口处理。") from exc
         return self
 

@@ -156,11 +156,15 @@ def normalize(clip: Clip, target: Path, settings: dict, control: Control):
         args += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
     vf = (f"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,"
           f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,"
-          f"fps={fps},setpts=PTS-STARTPTS,format=yuv420p")
+          f"setpts=PTS-STARTPTS,fps={fps},"
+          f"tpad=stop_mode=clone:stop_duration={clip.duration},format=yuv420p")
     args += ["-map", "0:v:0", "-map", "1:a:0" if silent else "0:a:0", "-vf", vf,
              "-af", "aresample=48000:async=1:first_pts=0,apad", "-ac", "2", "-ar", "48000",
              "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-threads", "2",
-             "-c:a", "aac", "-b:a", "160k", "-shortest", "-t", str(clip.duration),
+             # Explicit output rate and duration avoid -shortest truncating
+             # buffered frames on some FFmpeg builds. Both streams are padded
+             # then bounded by -t, preserving the complete clip duration.
+             "-r", str(fps), "-c:a", "aac", "-b:a", "160k", "-t", str(clip.duration),
              "-map_metadata", "-1", "-movflags", "+faststart", str(target)]
     run(args, control)
 
