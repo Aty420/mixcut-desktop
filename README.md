@@ -4,14 +4,23 @@ Windows 本地视频批量拼接工具。把素材分组放在主文件夹的直
 
 ## 下载后怎么用
 
-1. 在 GitHub 仓库右侧 **Releases** 下载 `MixCut-Windows-x64.zip`。
-2. 完整解压，进入 `MixCut` 文件夹，双击 **MixCut.exe**。
+1. 在 GitHub 仓库 **Actions → Build Windows EXE → 最新成功的构建 → Artifacts** 下载 `MixCut-Windows-x64`，解压下载文件，再解压里面的程序ZIP。
+2. 双击 **MixCut-Setup.exe** 安装，从开始菜单打开 **MixCut**。安装版支持一键卸载。
 3. 选择素材主文件夹，等待扫描；检查 A → B → C → D 等顺序。
 4. 设置本次新增数量、输出尺寸及输出位置，点击“开始生成”。
 
-发行包目标为 Windows 10 / 11 的64位系统。使用发行包不需要另装 Python 或 FFmpeg；不要只拷贝 EXE，须保留整个解压文件夹。当前开发交付为源码，实际 Windows 兼容性以 GitHub Windows 构建和本机运行结果为准。
+发行包目标为 Windows 10 / 11 的64位系统。使用发行包不需要另装 Python 或 FFmpeg。ZIP 内的 `MixCut` 文件夹是便携版；使用便携版时须保留整个文件夹，不能只拷贝 EXE。当前开发交付为源码，实际 Windows 兼容性以 GitHub Windows 构建和本机运行结果为准。
 
-如果还没有 Release：进入 **Actions → Build Windows EXE → 成功的构建 → Artifacts**，下载 `MixCut-Windows-x64`，解压后再解压其中的程序ZIP。自动构建的下载文件保留30天；发布版本的 Release 下载长期保留。
+自动构建的下载文件保留30天。当前工作流不自动发布 Release；如需长期下载，可手动把构建成功的ZIP放到 Releases。
+
+## v0.2.1 更新
+
+- 界面字体整体缩小约15%，保持原有浅色布局。
+- 新增正式安装版，软件右下角、开始菜单和安装目录均有卸载入口。
+- 卸载清理已安装程序、快捷方式、安装记录、缓存位置登记和已登记输出目录中的临时转码文件。
+- 保留原视频、成片、CSV清单和项目组合历史；文件占用或磁盘离线时提示并停止卸载，方便处理后重试。
+
+旧版异常退出遗留的缓存：先用新版重新扫描对应素材主文件夹一次，即可从历史记录登记旧输出位置。详情见使用说明。
 
 ## 差异规则
 
@@ -73,16 +82,7 @@ git remote add origin https://github.com/YOUR_ACCOUNT/mixcut-desktop.git
 git push -u origin main
 ```
 
-自动流程安装依赖 → 运行测试 → 打包 Windows EXE → 从打包后的 EXE 实际生成测试视频 → 验证 GUI 可以启动 → 输出ZIP及SHA256。
-
-测试成功后，推送版本标签可自动发布下载页：
-
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-版本发布由标签触发；普通代码推送仅产生 Actions 下载文件，不覆盖已有 Release。
+自动流程安装依赖 → 运行测试 → 打包 Windows EXE → 验证实际视频导出与窗口启动 → 编译安装包 → 在隔离目录自动安装、卸载并检查缓存清理和用户文件保留 → 输出ZIP及SHA256。任一步骤失败就不上传下载包。
 
 ## 本地开发及构建
 
@@ -94,7 +94,7 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-在 Windows PowerShell 运行 `./scripts/build_windows.ps1`，生成 `dist/MixCut-Windows-x64.zip`。Windows EXE 由 Windows 环境构建，不把Linux程序改名为EXE。
+在 Windows PowerShell 运行 `./scripts/build_windows.ps1`，生成 `dist/MixCut-Windows-x64.zip`，内含安装版与便携版。构建需要 Inno Setup 6.3+，GitHub Windows runner 缺少时脚本通过 Chocolatey 安装；本机可提前安装 Inno Setup。Windows EXE 由 Windows 环境构建，不把Linux程序改名为EXE。
 
 参考：[PyInstaller 构建平台说明](https://pyinstaller.org/en/stable/)、[GitHub Actions 构建文件](https://docs.github.com/en/actions/tutorials/store-and-share-data)、[imageio-ffmpeg](https://github.com/imageio/imageio-ffmpeg)。
 

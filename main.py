@@ -5,7 +5,10 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    if "--self-test" in sys.argv:
+    if "--cleanup-uninstall" in sys.argv:
+        from mixcut.lifecycle import cleanup_main
+        sys.exit(cleanup_main())
+    elif "--self-test" in sys.argv:
         from mixcut.selftest import self_test
         destination = Path(sys.argv[sys.argv.index("--self-test") + 1])
         try:
