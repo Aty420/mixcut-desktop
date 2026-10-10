@@ -41,9 +41,14 @@ Name: "{group}\一键卸载 MixCut"; Filename: "{uninstallexe}"
 Name: "{app}\一键卸载 MixCut"; Filename: "{uninstallexe}"
 
 [INI]
-Filename: "{app}\mixcut-install.ini"; Section: "MixCut"; Key: "Uninstaller"; String: "{uninstallexe}"; Flags: uninsdeleteentry uninsdeleteemptyfile
+Filename: "{app}\mixcut-install.ini"; Section: "MixCut"; Key: "Uninstaller"; String: "{uninstallexe}"; Flags: uninsdeleteentry uninsdeletesectionifempty
 
-Filename: "{app}\mixcut-install.ini"; Section: "MixCut"; Key: "ProductId"; String: "{#ProductId}"; Flags: uninsdeleteentry uninsdeleteemptyfile
+Filename: "{app}\mixcut-install.ini"; Section: "MixCut"; Key: "ProductId"; String: "{#ProductId}"; Flags: uninsdeleteentry uninsdeletesectionifempty
+
+; This file belongs exclusively to the installer. Use an exact path, never
+; a wildcard that could delete user files placed in the install directory.
+[UninstallDelete]
+Type: files; Name: "{app}\mixcut-install.ini"
 
 [Messages]
 SetupWindowTitle=安装 - %1
@@ -91,3 +96,4 @@ begin
     end;
   end;
 end;
+
