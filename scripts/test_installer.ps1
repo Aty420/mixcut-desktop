@@ -13,15 +13,17 @@ if ($LASTEXITCODE -ne 0) { throw 'QA installer compile failed.' }
 function Run-And-Check([string]$File, [string[]]$Arguments) {
     # Keep diagnostics outside the install folder so uninstall can remove it.
     $log = Join-Path $qaRoot ((Split-Path $File -Leaf) + '.log')
-    $process = Start-Process -FilePath $File -ArgumentList ($Arguments + @('/LOG="' + $log + '"')) -PassThru
-    if (-not $process.WaitForExit(180000)) {
-        $process.Kill()
-        if (Test-Path $log) { Get-Content $log -Tail 100 | Write-Host }
-        throw "Installer test timed out: $File"
-    }
-    if ($process.ExitCode -ne 0) {
-        if (Test-Path $log) { Get-Content $log -Tail 100 | Write-Host }
-        throw "Installer test failed: $File ($($process.ExitCode))"
+    # Inno's uninstaller spawns a temporary child process for self-removal.
+    # -Wait waits for the whole process tree, unlike Process.WaitForExit().
+    # The Actions job's timeout-minutes remains the overall timeout guard.
+    $process = Start-Process -FilePath $File -ArgumentList ($Arguments + @('/LOG="' + $log + '"')) -Wait -PassThru
+    try {
+        if ($process.ExitCode -ne 0) {
+            if (Test-Path $log) { Get-Content $log -Tail 100 | Write-Host }
+            throw "Installer test failed: $File ($($process.ExitCode))"
+        }
+    } finally {
+        $process.Dispose()
     }
 }
 
@@ -52,8 +54,21 @@ foreach ($path in @("$qaApp/MixCut.exe", "$qaApp/unins000.exe", "$qaApp/_interna
 if (-not (Test-Path "$qaApp/user-file.txt") -or -not (Test-Path "$qaOutput/keep-video.mp4")) { throw 'Uninstall deleted user data.' }
 $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\MixCut.QA.${token}_is1"
 if (Test-Path $regPath) { throw 'Uninstall registration remained.' }
-Remove-Item $qaRoot -Recurse -Force
+# All product/cache/preservation assertions above remain mandatory.
+# Retry only test-fixture teardown if Windows has not released a log handle yet.
+for ($attempt = 0; $attempt -lt 60; $attempt++) {
+    if (-not (Test-Path -LiteralPath $qaRoot)) { break }
+    try {
+        Remove-Item -LiteralPath $qaRoot -Recurse -Force -ErrorAction Stop
+        break
+    } catch {
+        if ($attempt -eq 59) { throw }
+        Start-Sleep -Milliseconds 500
+    }
+}
+if (Test-Path -LiteralPath $qaRoot) { throw 'Test fixture cleanup did not finish.' }
 Remove-Item dist/MixCut-QA-Setup.exe
 Remove-Item Env:MIXCUT_QA_STATE, Env:MIXCUT_QA_OUTPUT
 Write-Host 'Installer/uninstaller/cache preservation checks passed.'
+
 
