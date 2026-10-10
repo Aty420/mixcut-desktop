@@ -11,10 +11,20 @@ New-Item $qaRoot -ItemType Directory | Out-Null
 & $Compiler "/DProductId=MixCut.QA.$token" '/DSetupName=MixCut-QA-Setup' "/DStatePath=$qaState" scripts/installer.iss
 if ($LASTEXITCODE -ne 0) { throw 'QA installer compile failed.' }
 function Run-And-Check([string]$File, [string[]]$Arguments) {
-    $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru
-    if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'Installer test timed out.' }
-    if ($process.ExitCode -ne 0) { throw "Installer test failed: $File ($($process.ExitCode))" }
+    # Keep diagnostics outside the install folder so uninstall can remove it.
+    $log = Join-Path $qaRoot ((Split-Path $File -Leaf) + '.log')
+    $process = Start-Process -FilePath $File -ArgumentList ($Arguments + @('/LOG="' + $log + '"')) -PassThru
+    if (-not $process.WaitForExit(180000)) {
+        $process.Kill()
+        if (Test-Path $log) { Get-Content $log -Tail 100 | Write-Host }
+        throw "Installer test timed out: $File"
+    }
+    if ($process.ExitCode -ne 0) {
+        if (Test-Path $log) { Get-Content $log -Tail 100 | Write-Host }
+        throw "Installer test failed: $File ($($process.ExitCode))"
+    }
 }
+
 Run-And-Check (Join-Path (Get-Location) 'dist/MixCut-QA-Setup.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/DIR="' + $qaApp + '"'),'/NOICONS')
 if (-not (Test-Path "$qaApp/unins000.exe")) { throw 'Missing installed uninstaller.' }
 $env:MIXCUT_QA_STATE = $qaState
@@ -46,3 +56,4 @@ Remove-Item $qaRoot -Recurse -Force
 Remove-Item dist/MixCut-QA-Setup.exe
 Remove-Item Env:MIXCUT_QA_STATE, Env:MIXCUT_QA_OUTPUT
 Write-Host 'Installer/uninstaller/cache preservation checks passed.'
+

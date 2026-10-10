@@ -71,7 +71,6 @@ UninstalledAll=MixCut 已卸载，已记录的程序缓存已清理。
 [Code]
 function InitializeUninstall(): Boolean;
 begin
-  CreateMutex('Local\MixCut.Desktop.Cleanup');
   Result := not CheckForMutexes('Local\MixCut.Desktop.Running');
   if not Result and not UninstallSilent then
     MsgBox('请先关闭所有 MixCut 窗口，再重新卸载。', mbError, MB_OK);
@@ -83,6 +82,17 @@ var
   Params: String;
 begin
   if CurUninstallStep = usUninstall then begin
+    { AppMutex has already been checked. Creating this earlier in
+      InitializeUninstall makes the uninstaller detect its own cleanup mutex. }
+    CreateMutex('Local\MixCut.Desktop.Cleanup');
+    { Block new app launches, then recheck in case one started while the user
+      was confirming the uninstall. Never remove files while an app is running. }
+    if CheckForMutexes('Local\MixCut.Desktop.Running') then begin
+      Log('MixCut started before cleanup; uninstall aborted before deleting files.');
+      if not UninstallSilent then
+        MsgBox('请先关闭所有 MixCut 窗口，再重新卸载。', mbError, MB_OK);
+      Abort;
+    end;
     Params := '--cleanup-uninstall --state-directory "' + ExpandConstant('{#StatePath}') + '"';
     if UninstallSilent then Params := Params + ' --silent-cleanup';
     if not Exec(ExpandConstant('{app}\MixCut.exe'), Params,
@@ -96,4 +106,5 @@ begin
     end;
   end;
 end;
+
 
