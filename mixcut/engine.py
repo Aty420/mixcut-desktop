@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .media import Cancelled, Clip, Control, Group, digest_file, join, normalize, probe
 from .project import Project
+from .lifecycle import remember
 
 
 def render_pending(project: Project, groups: list[Group], control: Control, notify=lambda _: None):
@@ -22,6 +23,7 @@ def render_pending(project: Project, groups: list[Group], control: Control, noti
             control.checkpoint()
             output = Path(job["output"])
             try:
+                remember("output", output.parent)
                 output.parent.mkdir(parents=True, exist_ok=True)
                 # Recovery window: a valid final file was atomically published before DB update.
                 if output.exists():

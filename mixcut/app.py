@@ -15,6 +15,7 @@ from .engine import render_pending
 from .media import Cancelled, Control, scan
 from .project import Project, ProjectLock
 from .workbench import Workbench, BG
+from .lifecycle import RuntimeSession
 
 class App(Workbench, tk.Tk):
     def __init__(self):
@@ -318,6 +319,32 @@ class App(Workbench, tk.Tk):
             self._pump_after = None
         super().destroy()
 
+    def uninstall_clicked(self):
+        if self.busy:
+            messagebox.showinfo("任务处理中", "请先停止当前任务，等待处理结束后再卸载。")
+            return
+        import configparser
+        import re
+        location = Path(sys.executable).parent
+        uninstaller = None
+        for encoding in ("utf-8-sig", "utf-16", "mbcs" if os.name == "nt" else "utf-8"):
+            config = configparser.ConfigParser(interpolation=None)
+            try:
+                config.read(location / "mixcut-install.ini", encoding=encoding)
+                if config.get("MixCut", "ProductId", fallback="") != "MixCut.Desktop":
+                    continue
+                candidate = Path(config.get("MixCut", "Uninstaller", fallback=""))
+                if candidate.parent.resolve() == location.resolve() and re.fullmatch(r"unins[0-9]{3}\.exe", candidate.name, re.IGNORECASE):
+                    uninstaller = candidate
+                    break
+            except (OSError, UnicodeError, configparser.Error):
+                continue
+        if not getattr(sys, "frozen", False) or uninstaller is None or not uninstaller.is_file():
+            messagebox.showinfo("卸载入口", "一键卸载随安装版提供。请使用 MixCut-Setup.exe 安装后，从这里或开始菜单卸载。")
+            return
+        self.uninstall_requested = uninstaller
+        self.destroy()
+
     def close_requested(self):
         if self.busy:
             if messagebox.askyesno("停止并退出", "停止当前处理并退出？已完成成片和任务记录会保留，下次可继续。"):
@@ -335,4 +362,12 @@ def main():
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except (AttributeError, OSError):
             pass
-    App().mainloop()
+    try:
+        with RuntimeSession():
+            app = App()
+            app.mainloop()
+        uninstaller = getattr(app, "uninstall_requested", None)
+        if uninstaller:
+            subprocess.Popen([str(uninstaller)], cwd=uninstaller.parent)
+    except (RuntimeError, OSError) as exc:
+        messagebox.showerror("无法启动 MixCut", str(exc))

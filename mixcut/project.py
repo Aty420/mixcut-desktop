@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .combinations import DistanceIndex, capacity, codebook, minimum_distance
 from .media import Control, Group
+from .lifecycle import remember_project
 
 
 class ProjectLock(AbstractContextManager):
@@ -49,6 +50,7 @@ class Project(AbstractContextManager):
         self.root = root.resolve()
         directory = self.root / ".mixcut"
         directory.mkdir(exist_ok=True)
+        remember_project(self.root)
         self.db = sqlite3.connect(directory / "project.sqlite3")
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""

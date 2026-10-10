@@ -12,6 +12,8 @@ INK = "#14243A"
 MUTED = "#748096"
 LINE = "#E2E7EF"
 ACCENT = "#3263FF"
+FONT_SCALE = 0.85
+
 PALETTE = [("#E3EFFF", "#1461C5"), ("#ECE6FF", "#6A4FD7"),
            ("#E3F5E9", "#168653"), ("#FFF0E3", "#C55D20")]
 
@@ -189,7 +191,7 @@ class Workbench:
     def font(self, size, bold=False):
         key = (size, bold)
         if key not in self._fonts:
-            actual = round(size*.87) if self.compact else size
+            actual = max(9, round(size * FONT_SCALE * (.87 if self.compact else 1)))
             self._fonts[key] = tkfont.Font(self, family=self.ui_font, size=actual,
                                            weight="bold" if bold else "normal")
         return self._fonts[key]
@@ -202,12 +204,12 @@ class Workbench:
             return
         self.compact = compact
         for (size, _), font in self._fonts.items():
-            font.configure(size=round(size*.87) if compact else size)
+            font.configure(size=max(9, round(size * FONT_SCALE * (.87 if compact else 1))))
         style = ttk.Style(self)
         for name in ("TButton", "Segment.TRadiobutton"):
-            style.configure(name, font=(self.ui_font, 11 if compact else 13))
+            style.configure(name, font=(self.ui_font, 10 if compact else 11))
         style.configure("TButton", padding=(12, 6 if compact else 9))
-        style.configure("Accent.TButton", font=(self.ui_font, 14 if compact else 20, "bold"),
+        style.configure("Accent.TButton", font=(self.ui_font, 12 if compact else 17, "bold"),
                         padding=(16, 9 if compact else 12))
         for name in ("TEntry", "TCombobox", "TSpinbox"):
             style.configure(name, padding=(8, 6 if compact else 9))
@@ -262,19 +264,20 @@ class Workbench:
         self.geometry(f"{width}x{height}")
         self.minsize(self.px(1120), self.px(720))
         self.configure(bg=BG)
-        self.option_add("*Font", (self.ui_font, 13))
+        self.option_add("*Font", (self.ui_font, 11))
         style = ttk.Style(self)
         style.theme_use("clam")
-        style.configure("TButton", font=(self.ui_font, 13), foreground=INK, background=WHITE,
+        style.configure("TButton", font=(self.ui_font, 11), foreground=INK, background=WHITE,
                         bordercolor=LINE, lightcolor=WHITE, darkcolor=WHITE, padding=(12, 9), relief="solid", borderwidth=1)
         style.map("TButton", background=[("disabled", "#F1F3F7"), ("pressed", "#E3E9FC"), ("active", "#F1F5FF")],
                   foreground=[("disabled", "#A2AABB")], bordercolor=[("focus", ACCENT)])
+        style.configure("Footer.TButton", font=(self.ui_font, 9), padding=(8, 2), background=BG)
         style.configure("Icon.TButton", padding=(5, 7), width=0)
-        style.configure("Accent.TButton", font=(self.ui_font, 20, "bold"), padding=(16, 12), background=ACCENT,
+        style.configure("Accent.TButton", font=(self.ui_font, 17, "bold"), padding=(16, 12), background=ACCENT,
                         foreground=WHITE, bordercolor=ACCENT, lightcolor=ACCENT, darkcolor=ACCENT)
         style.map("Accent.TButton", background=[("disabled", "#DDE5FA"), ("pressed", "#2148D1"), ("active", "#2855E7")],
                   foreground=[("disabled", "#8396BA")], bordercolor=[("focus", "#14243A")])
-        style.configure("Segment.TRadiobutton", indicatoron=False, padding=(10, 9), font=(self.ui_font, 13),
+        style.configure("Segment.TRadiobutton", indicatoron=False, padding=(10, 9), font=(self.ui_font, 11),
                         background=WHITE, foreground=INK, bordercolor=LINE, relief="solid", anchor="center")
         style.layout("Segment.TRadiobutton", [("Radiobutton.border", {"sticky": "nswe", "children": [
             ("Radiobutton.padding", {"sticky": "nswe", "children": [("Radiobutton.label", {"sticky": "nswe"})]})]})])
@@ -410,6 +413,7 @@ class Workbench:
         footer = tk.Frame(main, bg=BG)
         footer.grid(row=3, column=0, sticky="ew", pady=10)
         label(footer, "本地运行", 9, color="#218555", image=self.icon("circle-check", "blue", 18), compound="left", padx=4).pack(side="left")
+        ttk.Button(footer, text="卸载软件", style="Footer.TButton", command=self.uninstall_clicked).pack(side="right", padx=(18, 0))
         label(footer, textvariable=self.history, size=9, color=MUTED).pack(side="right")
         self.quantity.trace_add("write", lambda *_: self.update_quantity())
         self.update_quantity()
