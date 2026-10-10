@@ -7,7 +7,7 @@ Windows 本地视频批量拼接工具。把素材分组放在主文件夹的直
 1. 在 GitHub 仓库右侧 **Releases** 下载 `MixCut-Windows-x64.zip`。
 2. 完整解压，进入 `MixCut` 文件夹，双击 **MixCut.exe**。
 3. 选择素材主文件夹，等待扫描；检查 A → B → C → D 等顺序。
-4. 设置本次新增数量、输出尺寸及输出位置，点击“新增并开始生成”。
+4. 设置本次新增数量、输出尺寸及输出位置，点击“开始生成”。
 
 发行包目标为 Windows 10 / 11 的64位系统。使用发行包不需要另装 Python 或 FFmpeg；不要只拷贝 EXE，须保留整个解压文件夹。当前开发交付为源码，实际 Windows 兼容性以 GitHub Windows 构建和本机运行结果为准。
 
@@ -78,8 +78,8 @@ git push -u origin main
 测试成功后，推送版本标签可自动发布下载页：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 版本发布由标签触发；普通代码推送仅产生 Actions 下载文件，不覆盖已有 Release。
